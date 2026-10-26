@@ -19,12 +19,12 @@ piezas declarativas del propio framework.
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-demo-336791?logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 ![Error Handling](https://img.shields.io/badge/Error%20Handling-RFC%209457-blueviolet)
-![Status](https://img.shields.io/badge/status-backend%20completo-brightgreen)
+![Status](https://img.shields.io/badge/status-deployado-brightgreen)
 
-**🚀 API en vivo**: _(pendiente de deploy)_
-_(si se despliega en un plan gratuito, la primera petición tras un rato sin tráfico puede tardar en responder mientras la instancia "despierta")_
+**🚀 API en vivo**: https://campus-gate-44s4.onrender.com
+_(plan gratuito de Render: la primera petición tras un rato sin tráfico puede tardar ~30-60s mientras la instancia "despierta")_
 
-**🖥️ Front**: _(pendiente)_
+**🖥️ Front (GitHub Pages)**: https://mdev-repos.github.io/front_campusgate__proyecto_demostracion/
 
 ---
 
@@ -506,8 +506,8 @@ prohibidos a propósito para ver los 401, 403 y 400 reales.
 - [x] Modo demo con datos ficticios y reseteo automático
 
 **Pendiente**
-- [ ] Front de consumo
-- [ ] Deploy (Render + Neon)
+- [x] Front de consumo (React + TypeScript, publicado en GitHub Pages)
+- [x] Deploy de la API (Render + Neon)
 - [ ] Colección de Postman con casos positivos y negativos
 - [ ] Tests unitarios y de integración
 
