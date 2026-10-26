@@ -4,12 +4,11 @@
   # CampusGate
 </div>
 
-API REST de una plataforma educativa (alumnos, profesores y cursos) construida para
-**dominar Spring Security de punta a punta**: autenticación **stateless con JWT**, usuarios,
-roles y permisos modelados desde cero, y autorización fina por permiso y por pertenencia.
-Está hecha con las prácticas actuales (Spring Boot 4 y Spring Security 7) y no con el código
-que trae el curso de TodoCode Academy, que sirvió como punto de partida y se reemplazó por
-piezas declarativas del propio framework.
+API REST de una plataforma educativa (alumnos, profesores y cursos) con **autenticación stateless
+con JWT**, usuarios, roles y permisos modelados desde cero, y autorización fina por permiso y por
+pertenencia. Nació como ejercicio de Spring Security de TodoCode Academy y se construyó con las
+prácticas actuales (Spring Boot 4 y Spring Security 7), usando piezas declarativas del propio
+framework.
 
 ![Java](https://img.shields.io/badge/Java-25-orange?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4-brightgreen?logo=springboot&logoColor=white)
@@ -28,10 +27,31 @@ _(plan gratuito de Render: la primera petición tras un rato sin tráfico puede 
 
 ---
 
+## Probarlo sin instalar nada
+
+Abrí el **[front](https://mdev-repos.github.io/front_campusgate__proyecto_demostracion/)**: se conecta solo a esta
+API y tiene tres cuentas de ejemplo de un clic (administrador, profesor y alumno) con datos ficticios ya
+cargados. Se puede:
+
+- Recorrer las vistas de cada tipo de cuenta y comparar qué ve y qué puede hacer cada una sobre los mismos datos.
+- Gestionar usuarios, perfiles, cursos y matrículas como administrador.
+- Editar los cursos propios y ver sus alumnos como profesor, o ver los cursos matriculados como alumno.
+- Inspeccionar el JWT (header, payload, firma, permisos y tiempo de vida) y lanzar requests prohibidos a propósito
+  desde un laboratorio para ver los `401`, `403` y `400` reales.
+
+Un semáforo en la cabecera indica cuándo el servidor ya respondió: corre en un plan gratuito que se duerme tras un
+rato sin uso, y el front le avisa apenas se abre la página para que despierte mientras se lee la presentación.
+
+También se puede consumir la API directamente (ver [Endpoints](#endpoints)) o levantarla en local
+(ver [Cómo correrlo en local](#cómo-correrlo-en-local)).
+
+---
+
 ## Índice
 
+- [Probarlo sin instalar nada](#probarlo-sin-instalar-nada)
 - [Sobre el nombre](#sobre-el-nombre)
-- [Objetivo](#objetivo)
+- [Qué es](#qué-es)
 - [Arquitectura de seguridad](#arquitectura-de-seguridad)
 - [Decisiones de diseño](#decisiones-de-diseño)
 - [Stack técnico](#stack-técnico)
@@ -42,8 +62,9 @@ _(plan gratuito de Render: la primera petición tras un rato sin tráfico puede 
 - [Estructura del repositorio](#estructura-del-repositorio)
 - [Cómo correrlo en local](#cómo-correrlo-en-local)
 - [Perfiles y configuración](#perfiles-y-configuración)
-- [Proyecto relacionado](#proyecto-relacionado)
-- [Roadmap](#roadmap)
+- [Front](#front)
+- [Qué incluye](#qué-incluye)
+- [Limitaciones conocidas](#limitaciones-conocidas)
 - [Autor](#autor)
 
 ---
@@ -54,16 +75,9 @@ _(plan gratuito de Render: la primera petición tras un rato sin tráfico puede 
 puerta que decide quién entra y qué puede hacer). El escudo del logo lleva un libro abierto
 con una cerradura: educación protegida.
 
-## Objetivo
+## Qué es
 
-Es el banco de pruebas de seguridad de mi roadmap. La idea es construir una vez, con
-criterio y documentando cada decisión, todo lo que una API real necesita para autenticar y
-autorizar, y después trasladar ese conocimiento a mis otros proyectos
-([NodoBank](https://github.com/mdev-repos/microservicios_nodobank__proyecto_demostracion) y
-los que vengan).
-
-El dominio educativo se eligió porque permite practicar los dos niveles de autorización que
-aparecen en el trabajo real:
+Una API que resuelve los dos tipos de autorización que aparecen en una aplicación real:
 
 - **Por permiso (RBAC)**: qué puede hacer cada tipo de usuario (administrador, profesor,
   alumno) sobre cada recurso.
@@ -129,7 +143,7 @@ Los controllers delegan en services y nunca devuelven entidades: toda respuesta 
 | Cuenta y perfil | `UserSec` (seguridad) separado de `Student` y `Professor` (dominio), con la flecha del perfil hacia la cuenta | La seguridad no depende del dominio; un usuario puede tener ambos perfiles |
 | Coherencia rol/perfil | Solo quien tiene el rol `PROFESSOR` puede tener perfil de profesor (ídem alumno), y no se puede quitar el rol mientras exista el perfil | Evita estados imposibles que volverían poco confiables las reglas de pertenencia |
 | Pertenencia | `@PreAuthorize` con un bean propio (`@courseAuth.isOwner(...)`), más permisos `*_ANY` para el administrador | La política de acceso vive en un solo lugar; el permiso dice *qué*, el bean dice *sobre qué recurso* |
-| Identificador de login | Email normalizado (minúsculas, sin espacios), único | Compatible con el login social que se suma después |
+| Identificador de login | Email normalizado (minúsculas, sin espacios), único | Una cuenta por persona: `Ana@x.com` y `ana@x.com` son la misma |
 | `sub` del token | UUID del usuario, no el email | Es estable: el email puede cambiar |
 | Contenido del token | `iss`, `sub`, `iat`, `exp`, `jti` y la lista de `permissions` | Mínima información: el payload lo puede leer cualquiera |
 | Autorización HTTP | **Deny by default** (solo `/auth/login` es público) | Un endpoint nuevo nunca queda abierto por olvido |
@@ -163,7 +177,7 @@ Los controllers delegan en services y nunca devuelven entidades: toda respuesta 
 
 | Entidad | Campos principales | Relaciones |
 |---|---|---|
-| `UserSec` | `id` (UUID), `email` (único), `passwordHash`, `enabled`, `accountNotLocked`, `failedLoginAttempts`, `lockedUntil`, `roles`, `createdAt`, `updatedAt` | — |
+| `UserSec` | `id` (UUID), `email` (único), `passwordHash`, `enabled`, `accountNotLocked`, `failedLoginAttempts`, `lockedUntil`, `roles`, `createdAt`, `updatedAt` | - |
 | `Professor` | `id` (UUID), `firstName`, `lastName` | `@OneToOne` con `UserSec` (único) |
 | `Student` | `id` (UUID), `firstName`, `lastName` | `@OneToOne` con `UserSec` (único) |
 | `Course` | `id` (UUID), `title`, `description` | `@ManyToOne` con `Professor` (el dueño) · `@ManyToMany` con `Student` |
@@ -181,7 +195,7 @@ Los controllers delegan en services y nunca devuelven entidades: toda respuesta 
 Todos exigen un token válido salvo `POST /auth/login`. La columna **Acceso** indica el permiso
 requerido; "+ dueño" significa que además el recurso debe pertenecerle al usuario.
 
-**Autenticación** — base path `/auth`
+**Autenticación** - base path `/auth`
 
 | Método | Ruta | Descripción | Acceso | Éxito | Errores |
 |---|---|---|---|---|---|
@@ -189,14 +203,14 @@ requerido; "+ dueño" significa que además el recurso debe pertenecerle al usua
 | `GET` | `/me` | Id y permisos del token actual | autenticado | `200 OK` | `401` |
 | `PUT` | `/password` | Cambia la contraseña propia | autenticado | `204 No Content` | `400`, `401`, `409` |
 
-**Estado** — base path `/ping` (públicos, para precalentar la instancia)
+**Estado** - base path `/ping` (públicos, para precalentar la instancia)
 
 | Método | Ruta | Descripción | Éxito |
 |---|---|---|---|
 | `GET` | `` | Responde sin tocar la base (sirve para un pinger externo) | `200 OK` |
 | `GET` | `/ready` | Ejecuta un `SELECT 1`: confirma que la base también despertó | `200 OK` / `503` |
 
-**Usuarios** — base path `/users`
+**Usuarios** - base path `/users`
 
 | Método | Ruta | Descripción | Acceso | Éxito | Errores |
 |---|---|---|---|---|---|
@@ -206,7 +220,7 @@ requerido; "+ dueño" significa que además el recurso debe pertenecerle al usua
 | `PATCH` | `/{id}` | Cambia roles, habilitado o bloqueo | `USER_UPDATE` | `200 OK` | `400`, `403`, `404`, `409` |
 | `DELETE` | `/{id}` | Deshabilita al usuario (baja lógica) | `USER_DELETE` | `204 No Content` | `403`, `404`, `409` |
 
-**Profesores** — base path `/professors`
+**Profesores** - base path `/professors`
 
 | Método | Ruta | Descripción | Acceso | Éxito | Errores |
 |---|---|---|---|---|---|
@@ -216,7 +230,7 @@ requerido; "+ dueño" significa que además el recurso debe pertenecerle al usua
 | `GET` | `/me` | Perfil del profesor autenticado | `PROFESSOR_READ` | `200 OK` | `403`, `404` |
 | `GET` | `/me/courses` | Cursos que dicta el profesor autenticado | `PROFESSOR_READ` | `200 OK` | `403` |
 
-**Alumnos** — base path `/students`
+**Alumnos** - base path `/students`
 
 | Método | Ruta | Descripción | Acceso | Éxito | Errores |
 |---|---|---|---|---|---|
@@ -226,7 +240,7 @@ requerido; "+ dueño" significa que además el recurso debe pertenecerle al usua
 | `GET` | `/me` | Perfil del alumno autenticado | `STUDENT_READ` | `200 OK` | `403`, `404` |
 | `GET` | `/me/courses` | Cursos en los que está matriculado | `STUDENT_READ` | `200 OK` | `403` |
 
-**Cursos** — base path `/courses`
+**Cursos** - base path `/courses`
 
 | Método | Ruta | Descripción | Acceso | Éxito | Errores |
 |---|---|---|---|---|---|
@@ -240,7 +254,7 @@ requerido; "+ dueño" significa que además el recurso debe pertenecerle al usua
 | `DELETE` | `/{courseId}/students/{studentId}` | Desmatricula a un alumno | `COURSE_UPDATE_ANY` | `204 No Content` | `403`, `404` |
 
 <details>
-<summary><strong>Ejemplo — login</strong></summary>
+<summary><strong>Ejemplo - login</strong></summary>
 
 `POST /auth/login`
 
@@ -259,7 +273,7 @@ El token se envía en cada request como `Authorization: Bearer <accessToken>`.
 </details>
 
 <details>
-<summary><strong>Ejemplo — error de validación</strong></summary>
+<summary><strong>Ejemplo - error de validación</strong></summary>
 
 `POST /users` con un cuerpo inválido
 
@@ -283,7 +297,7 @@ La respuesta nunca incluye el valor rechazado (podría ser una contraseña).
 </details>
 
 <details>
-<summary><strong>Ejemplo — pertenencia: un profesor edita un curso ajeno</strong></summary>
+<summary><strong>Ejemplo - pertenencia: un profesor edita un curso ajeno</strong></summary>
 
 `PUT /courses/{id}` con el token de otro profesor
 
@@ -298,7 +312,7 @@ Si el curso no existe, un profesor recibe el mismo `403`: no puede averiguar qu�
 </details>
 
 <details>
-<summary><strong>Ejemplo — login fallido</strong></summary>
+<summary><strong>Ejemplo - login fallido</strong></summary>
 
 Contraseña incorrecta, email inexistente y cuenta bloqueada devuelven **la misma** respuesta.
 El detalle solo queda en el log interno.
@@ -476,56 +490,44 @@ Otras propiedades:
 | `spring.data.web.pageable.default-page-size` | `20` | Tamaño de página por defecto |
 | `spring.data.web.pageable.max-page-size` | `50` | Tamaño máximo que puede pedir el cliente |
 
-## Proyecto relacionado
+## Front
 
-Front que consume esta API:
+Interfaz web que consume esta API:
 [`front_campusgate__proyecto_demostracion`](https://github.com/mdev-repos/front_campusgate__proyecto_demostracion)
 (React + TypeScript). Tiene una landing, un semáforo que informa si la API ya despertó, tres cuentas de ejemplo,
 las vistas de administrador, profesor y alumno, un inspector del JWT y un laboratorio que dispara requests
 prohibidos a propósito para ver los 401, 403 y 400 reales.
 
-## Roadmap
+## Qué incluye
 
-**Backend**
-- [x] Modelo de seguridad: permisos, roles y usuario con flags de cuenta
-- [x] `UserDetailsService` con authorities derivadas de los permisos
-- [x] Configuración del JWT validada con *fail fast*, y secretos por variable de entorno
-- [x] Emisión y validación de tokens (Nimbus) con resource server nativo
-- [x] `SecurityFilterChain` stateless con *deny by default*
-- [x] Respuestas 401 y 403 en formato `ProblemDetail`
-- [x] Login con `AuthenticationManager` y primer administrador por *seed*
-- [x] `GlobalExceptionHandler` con errores genéricos y validación por campo
-- [x] Bloqueo temporal por intentos fallidos
-- [x] CRUD de usuarios protegido por permisos (con baja lógica y paginación)
-- [x] Cambio de contraseña propia
-- [x] Profesores, alumnos y cursos, con reglas de pertenencia
-- [x] Perfiles `dev`, `prod` y `demo`
-- [x] Endpoints de consumo para un front: perfil propio, cursos propios, listados y roster
-- [x] CORS por ambiente y `/ping` para precalentar la instancia
-- [x] Compatibilidad con PostgreSQL y Dockerfile
-- [x] Modo demo con datos ficticios y reseteo automático
+- Modelo de seguridad con permisos, roles y usuarios con flags de cuenta, y `UserDetailsService` con authorities derivadas de los permisos
+- Configuración del JWT validada con *fail fast* y secretos solo por variable de entorno
+- Emisión y validación de tokens (Nimbus) con resource server nativo, y `SecurityFilterChain` stateless con *deny by default*
+- Respuestas `401`, `403` y de error en formato `ProblemDetail`, con `GlobalExceptionHandler` y validación por campo
+- Login con `AuthenticationManager`, primer administrador por *seed* y bloqueo temporal por intentos fallidos
+- CRUD de usuarios protegido por permisos, con baja lógica y paginación
+- Cambio de contraseña propia
+- Profesores, alumnos y cursos con reglas de pertenencia
+- Endpoints para un front: perfil propio, cursos propios, listados y lista de alumnos de un curso
+- Perfiles `dev`, `prod` y `demo`, con CORS por ambiente
+- `/ping` para precalentar la instancia, compatibilidad con MySQL y PostgreSQL, y `Dockerfile`
+- Modo demo con datos ficticios y reseteo automático
+- Desplegada en Render, con la base en Neon, y front publicado en GitHub Pages
 
-**Pendiente**
-- [x] Front de consumo (React + TypeScript, publicado en GitHub Pages)
-- [x] Deploy de la API (Render + Neon)
-- [ ] Colección de Postman con casos positivos y negativos
-- [ ] Tests unitarios y de integración
+## Limitaciones conocidas
 
-**Limitaciones conocidas y dónde se resuelven**
-
-Son temas con entidad propia, y se van a trabajar en
-[NodoBank](https://github.com/mdev-repos/microservicios_nodobank__proyecto_demostracion):
-
-| Pendiente | Qué es realmente |
+| Tema | Detalle |
 |---|---|
-| RS256 + JWKS | Un concepto nuevo (claves asimétricas), no un retoque |
-| Refresh tokens y revocación | Resuelve que el JWT siga vivo tras deshabilitar o cambiar la contraseña |
-| Login social | `oauth2-client`, otra pieza entera |
-| Rate limiting, Flyway, N+1 | Endurecimiento de producción |
+| Vida del token | Un JWT ya emitido sigue siendo válido hasta que vence (30 minutos), aunque se deshabilite al usuario o cambie su contraseña. No hay refresh tokens ni revocación |
+| Firma | HS256 con una clave compartida: alcanza para un único servicio |
+| Fuerza bruta | El bloqueo por intentos puede usarse para bloquear a propósito a otra persona y el contador no es atómico. No hay límite de pedidos por IP |
+| Base de datos | Sin herramienta de migraciones: el perfil `prod` solo valida que el esquema coincida |
+| Rendimiento | Los listados con roles cargados de forma `EAGER` pueden disparar consultas adicionales (N+1) |
+| Acceso | Solo email y contraseña, sin login social |
 
 ## Autor
 
 **Matías Mazzitelli**
-_Backend Developer — Java / Spring Boot_
+_Backend Developer - Java / Spring Boot_
 
 [GitHub] https://github.com/mdev-repos · [LinkedIn] https://www.linkedin.com/in/mnm-dev
